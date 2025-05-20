@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: slack-translation-bot
+  namespace: slack
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: slack-translation-bot
+  template:
+    metadata:
+      labels:
+        app: slack-translation-bot
+    spec:
+      securityContext:
+        fsGroup: 1000
+      initContainers:
+        - name: init-db
+          image: busybox
+          command: ['sh', '-c', '
+            mkdir -p /app/resources /app/logs && 
+            touch /app/resources/data.db && 
+            chown -R 1000:1000 /app/resources /app/logs && 
+            chmod 755 /app/resources /app/logs && 
+            chmod 644 /app/resources/data.db && 
+            ls -la /app/resources /app/logs']
+          volumeMounts:
+            - name: db-volume
+              mountPath: /app/resources
+            - name: logs-volume
+              mountPath: /app/logs
+      containers:
+        - name: slack-translation-bot
+          image: 192.168.8.49:30002/library/slack-translation-bot:1.0.0
+          ports:
+            - containerPort: 3000
+          env:
+            - name: TZ
+              value: Asia/Seoul
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: DB_PATH
+              value: "/app/resources/data.db"
+          securityContext:
+            runAsUser: 1000
+            runAsGroup: 1000    
+          volumeMounts:
+            - name: config-volume
+              mountPath: /app/app_config.yaml
+              subPath: app_config.yaml
+            - name: db-volume
+              mountPath: /app/resources
+            - name: logs-volume
+              mountPath: /app/logs
+      volumes:
+        - name: config-volume
+          configMap:
+            name: slack-translation-bot-config
+        - name: db-volume
+          persistentVolumeClaim:
+            claimName: slack-translation-bot-db
+        - name: logs-volume
+          emptyDir: {}

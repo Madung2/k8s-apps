@@ -32,7 +32,7 @@ spec:
               mountPath: /app/logs
       containers:
         - name: slack-translation-bot
-          image: 192.168.8.49:30002/library/slack-translation-bot:1.0.4
+          image: 192.168.8.49:30002/library/slack-translation-bot:1.0.5
           ports:
             - containerPort: 3000
           env:
